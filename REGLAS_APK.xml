@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ReglasDesarrolloFlashChip>
+    <Meta>
+        <Autor>WoRFReD</Autor>
+        <Canal>FlashChip</Canal>
+        <CanalUrl>https://youtube.com/@flashchiped</CanalUrl>
+        <VersionDocumento>1.0</VersionDocumento>
+        <FechaActualizacion>Noviembre 2026</FechaActualizacion>
+        <Descripcion>Especificación de reglas y estándares obligatorios para proyectos Android APK desarrollados con Antigravity</Descripcion>
+    </Meta>
+
+    <Ubicaciones>
+        <DesarrolloLocal>C:\APPs_Atigravity\{NombreProyecto}</DesarrolloLocal>
+        <RespaldoRemoto>Z:\DIGIstorage\APPs_Atigravity\{NombreProyecto}</RespaldoRemoto>
+        <HerramientasCompartidas>C:\APPs_Atigravity\SDK_Gradle</HerramientasCompartidas>
+    </Ubicaciones>
+
+    <ControlVersiones>
+        <VersionInicial id="1.00" codigo="100"/>
+        <IncrementoPorModificacion>0.01</IncrementoPorModificacion>
+        <IncrementoCodigoPorModificacion>1</IncrementoCodigoPorModificacion>
+        <ArchivosAActualizar>
+            <Archivo>app/build.gradle.kts (versionCode y versionName)</Archivo>
+            <Archivo>informe_versiones.xml</Archivo>
+            <Archivo>README.md (Tabla de Changelog)</Archivo>
+            <Archivo>Cabeceras de archivos fuente Kotlin</Archivo>
+        </ArchivosAActualizar>
+    </ControlVersiones>
+
+    <FirmaDigital>
+        <ModoCompilacionObligatorio>Release Oficial Firmada (No DEBUG)</ModoCompilacionObligatorio>
+        <AlmacenClaves>flashchip-master.jks</AlmacenClaves>
+        <Alias>flashchip</Alias>
+        <PasswordAlmacen>flashchippass</PasswordAlmacen>
+        <PasswordClave>flashchippass</PasswordClave>
+        <HuellaSha256>CB:F2:50:E0:92:11:E1:8C:A8:68:44:41:56:4B:C3:3A:19:BA:B0:DE:14:1F:87:B1:E0:99:93:A5:7C:56:7B:1D</HuellaSha256>
+        <EsquemasFirma>
+            <V1JarSigning activo="true"/>
+            <V2ApkSignatureScheme activo="true" motivo="Obligatorio para evitar errores de instalacion en Huawei EMUI y HarmonyOS"/>
+        </EsquemasFirma>
+    </FirmaDigital>
+
+    <CompatibilidadHardware>
+        <HuaweiVsSamsung>
+            <ReglaStorage3x>APKs grandes requieren al menos el triple de su peso libre en /data para la fase final de dex2oat / ART.</ReglaStorage3x>
+            <ReglaAbisCpu>Si el APK contiene binarios nativos .so, incluir siempre soporte armeabi-v7a (32 bits, tablets Huawei Kirin) y arm64-v8a (64 bits, tablets Samsung y telefonos modernos).</ReglaAbisCpu>
+            <ReglaFirmaPrevia>Verificar que no exista una version instalada con diferente certificado (INSTALL_FAILED_UPDATE_INCOMPATIBLE).</ReglaFirmaPrevia>
+        </HuaweiVsSamsung>
+        <AndroidSDK>
+            <MinSdk>26</MinSdk>
+            <TargetSdk>34</TargetSdk>
+            <CompileSdk>34</CompileSdk>
+        </AndroidSDK>
+    </CompatibilidadHardware>
+
+    <EstiloVisual>
+        <Tema>Cyberpunk / Dark Mode</Tema>
+        <BgDark>#0A0E17</BgDark>
+        <SurfaceDark>#131B2A</SurfaceDark>
+        <CardBorder>#24334B</CardBorder>
+        <FlashCyan>#00E5FF</FlashCyan>
+        <FlashAmber>#FFB300</FlashAmber>
+        <FlashGreen>#00E676</FlashGreen>
+        <FlashRed>#FF5252</FlashRed>
+        <TextPrimary>#F0F6FC</TextPrimary>
+        <TextSecondary>#8B949E</TextSecondary>
+    </EstiloVisual>
+
+    <ActualizacionesOTA>
+        <Proveedor>GitHub Releases</Proveedor>
+        <UrlApi>https://api.github.com/repos/WoRFReD/{NombreProyecto}/releases/latest</UrlApi>
+        <Modulo>OtaRepository.kt</Modulo>
+        <Instalacion>Via FileProvider seguro</Instalacion>
+    </ActualizacionesOTA>
+
+    <ArchivosObligatoriosPorProyecto>
+        <Archivo nombre="actualizar_y_probar.bat" descripcion="Script de compilacion release, instalacion ADB y subida automatica a GitHub"/>
+        <Archivo nombre="informe_versiones.xml" descripcion="Historial de versiones y cambios detallados"/>
+        <Archivo nombre="verificar_play_protect.bat" descripcion="Utilidad para verificar SHA-256 y apelar en Play Protect"/>
+        <Archivo nombre="README.md" descripcion="Documento bilingue con badges e instrucciones"/>
+        <Archivo nombre="flashchip-master.jks" descripcion="Keystore maestro de firma de FlashChip"/>
+    </ArchivosObligatoriosPorProyecto>
+</ReglasDesarrolloFlashChip>

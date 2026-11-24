@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#0A0E17"
+        android:pathData="M0,0h108v108h-108z"/>
+    <!-- Car body -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M34,44L40,28C41,25 43,24 46,24H62C65,24 67,25 68,28L74,44H79C81.8,44 84,46.2 84,49V64C84,65.7 82.7,67 81,67H79V76C79,78.2 77.2,80 75,80H71C68.8,80 67,78.2 67,76V67H41V76C41,78.2 39.2,80 37,80H33C30.8,80 29,78.2 29,76V67H27C25.3,67 24,65.7 24,64V49C24,46.2 26.2,44 29,44H34ZM41.5,42H66.5L62.7,30H45.3L41.5,42ZM33,56C34.7,56 36,54.7 36,53C36,51.3 34.7,50 33,50C31.3,50 30,51.3 30,53C30,54.7 31.3,56 33,56ZM75,56C76.7,56 78,54.7 78,53C78,51.3 76.7,50 75,50C73.3,50 72,51.3 72,53C72,54.7 73.3,56 75,56Z"/>
+    <!-- Signal/Pulse arcs -->
+    <path
+        android:strokeColor="#00E676"
+        android:strokeWidth="2.5"
+        android:pathData="M54,16 C66,16 76,20 82,26"/>
+    <path
+        android:strokeColor="#FFB300"
+        android:strokeWidth="2"
+        android:pathData="M54,10 C70,10 84,15 92,23"/>
+</vector>
