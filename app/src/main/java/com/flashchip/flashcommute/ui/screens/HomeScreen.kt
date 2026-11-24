@@ -1,4 +1,4 @@
-// Version 1.01 - FlashCommute
+// Version 1.03 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.ui.screens
 
@@ -265,6 +265,31 @@ fun HomeScreen(
                     Text("INFORMACIÓN DE TRAYECTO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = FlashCyan, letterSpacing = 1.sp)
                     Spacer(modifier = Modifier.height(10.dp))
 
+                    // Origen
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Home, contentDescription = null, tint = FlashGreen, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Origen: ${report?.originDescription ?: settings.homeAddress}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = if (report != null) "Calculado desde tu posición real" else "Ubicación de salida habitual",
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Destino
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically

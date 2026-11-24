@@ -1,4 +1,4 @@
-// Version 1.00 - FlashCommute
+// Version 1.03 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.data.model
 
@@ -18,7 +18,8 @@ data class TrafficReport(
     val providerUsed: String = "TomTom",
     val timestamp: Long = System.currentTimeMillis(),
     val incidentList: List<String> = emptyList(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val originDescription: String = "GPS en vivo"
 ) {
     val isCritical: Boolean
         get() = status == TrafficStatus.CRITICAL

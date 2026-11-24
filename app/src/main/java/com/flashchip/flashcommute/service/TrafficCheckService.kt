@@ -1,4 +1,4 @@
-// Version 1.00 - FlashCommute
+// Version 1.03 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.service
 
@@ -38,7 +38,7 @@ class TrafficCheckService : Service() {
         try {
             startForeground(NotificationHelper.NOTIFICATION_ID_SERVICE, foregroundNotification)
         } catch (e: Exception) {
-            // Android 14 foreground service requirement safe handling
+            // Android 14 safe handling
         }
 
         serviceScope.launch {
@@ -51,22 +51,28 @@ class TrafficCheckService : Service() {
                     return@launch
                 }
 
-                // Obtener ubicación GPS actual
+                // 1. Obtener ubicación GPS actual (con multilocalizador red/satélite)
                 val location = locationProvider.getCurrentLocation()
-                val originLat = location?.latitude ?: 40.4168
-                val originLng = location?.longitude ?: -3.7038
 
-                // Consultar reporte de tráfico
-                val report = trafficRepository.fetchTraffic(settings, originLat, originLng)
+                val (originLat, originLng, originDesc) = if (location != null) {
+                    Triple(location.latitude, location.longitude, "GPS en vivo")
+                } else {
+                    // Fallback a la ubicación de Casa configurada por el usuario (NUNCA Madrid)
+                    Triple(settings.homeLatitude, settings.homeLongitude, "Ubicación de Salida / Casa")
+                }
 
-                // Guardar en preferencias para la pantalla principal
+                // 2. Consultar reporte de tráfico
+                val rawReport = trafficRepository.fetchTraffic(settings, originLat, originLng)
+                val report = rawReport.copy(originDescription = originDesc)
+
+                // 3. Guardar en preferencias para la pantalla principal
                 settingsManager.saveLastReport(report)
 
-                // Emitir notificación correspondiente
+                // 4. Emitir notificación correspondiente
                 NotificationHelper.showTrafficAlert(this@TrafficCheckService, report)
 
             } catch (e: Exception) {
-                // Manejo silencioso ante errores de red o ubicación
+                // Manejo silencioso ante errores
             } finally {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()

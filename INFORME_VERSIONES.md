@@ -5,6 +5,22 @@
 
 ---
 
+## [1.03] - Ubicación de Salida/Casa y Localización Instantánea en Interiores/Garajes
+- **Fecha:** 24/11/2026
+- **VersionCode:** `103`
+- **VersionName:** `1.03`
+- **Estado:** 🟢 Estable / Producción
+
+### 🔴 [CORRECCION]
+- **Eliminación del Origen por Defecto Erróneo (Madrid):** Solucionado el problema que calculaba la ruta desde Madrid (536 km y 280 min) cuando el GPS tardaba en conectar en interiores o garajes.
+- **Multilocalizador GPS + Red:** Combinación de `FusedLocationProviderClient` con `LocationManager` (Network y GPS) con resolución en milisegundos mediante Wi-Fi y antenas celulares.
+
+### 🟢 [NUEVA_FUNCION]
+- **Ubicación de Salida Habitual / Casa Configurable:** Posibilidad de fijar la dirección de salida o casa en Ajustes mediante GPS o enlace de Google Maps. Si el GPS aún no tiene cobertura satelital al encender el coche, se usa esta ubicación exacta en lugar de fallar.
+- **Información del Origen en Pantalla Principal:** El HUD ahora muestra claramente el punto de partida (GPS en vivo o Casa) y la distancia real en kilómetros.
+
+---
+
 ## [1.02] - Corrección Extracción Enlaces Google Maps y Caja de Pegado Directo
 - **Fecha:** 24/11/2026
 - **VersionCode:** `102`
