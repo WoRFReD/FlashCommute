@@ -1,13 +1,10 @@
-// Version 1.03 - FlashCommute
+// Version 1.04 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.data.model
 
 import java.util.Calendar
 
 data class AppSettings(
-    val homeAddress: String = "Casa / Punto de Salida",
-    val homeLatitude: Double = 37.3898,
-    val homeLongitude: Double = -5.9850,
     val workAddress: String = "Toscano",
     val workLatitude: Double = 37.277612,
     val workLongitude: Double = -5.995569,

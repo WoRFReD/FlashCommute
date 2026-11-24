@@ -5,6 +5,18 @@
 
 ---
 
+## [1.04] - Origen 100% Dinámico en Tiempo Real (Sin punto fijo)
+- **Fecha:** 24/11/2026
+- **VersionCode:** `104`
+- **VersionName:** `1.04`
+- **Estado:** 🟢 Estable / Producción
+
+### 🔵 [OPTIMIZACION]
+- **Eliminación del Punto de Salida Prefijado:** Eliminada la tarjeta de configuración de Casa/Salida en Ajustes. La app ahora calcula siempre y únicamente desde las coordenadas GPS en tiempo real de donde se encuentre el usuario al arrancar el coche.
+- **Simplificación de Ajustes:** Pantalla de configuración más limpia, directa y enfocada exclusivamente en el destino del trabajo, Bluetooth y umbrales.
+
+---
+
 ## [1.03] - Ubicación de Salida/Casa y Localización Instantánea en Interiores/Garajes
 - **Fecha:** 24/11/2026
 - **VersionCode:** `103`

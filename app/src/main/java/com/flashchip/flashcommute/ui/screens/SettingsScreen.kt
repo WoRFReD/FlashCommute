@@ -1,4 +1,4 @@
-// Version 1.03 - FlashCommute
+// Version 1.04 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.ui.screens
 
@@ -54,13 +54,6 @@ fun SettingsScreen(
 
     val currentSettings by settingsManager.settingsFlow.collectAsState()
 
-    var homeAddress by remember { mutableStateOf(currentSettings.homeAddress) }
-    var homeLat by remember { mutableStateOf(currentSettings.homeLatitude.toString()) }
-    var homeLng by remember { mutableStateOf(currentSettings.homeLongitude.toString()) }
-    var homeUrlInput by remember { mutableStateOf("") }
-    var homeParseSuccess by remember { mutableStateOf<String?>(null) }
-    var isParsingHome by remember { mutableStateOf(false) }
-
     var workAddress by remember { mutableStateOf(currentSettings.workAddress) }
     var workLat by remember { mutableStateOf(currentSettings.workLatitude.toString()) }
     var workLng by remember { mutableStateOf(currentSettings.workLongitude.toString()) }
@@ -95,15 +88,10 @@ fun SettingsScreen(
     var showSavedSnackbar by remember { mutableStateOf(false) }
 
     fun saveAll() {
-        val hLat = homeLat.toDoubleOrNull() ?: 37.3898
-        val hLng = homeLng.toDoubleOrNull() ?: -5.9850
         val lat = workLat.toDoubleOrNull() ?: 37.277612
         val lng = workLng.toDoubleOrNull() ?: -5.995569
 
         val updated = currentSettings.copy(
-            homeAddress = homeAddress,
-            homeLatitude = hLat,
-            homeLongitude = hLng,
             workAddress = workAddress,
             workLatitude = lat,
             workLongitude = lng,
@@ -212,178 +200,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 2. PUNTO DE SALIDA HABITUAL / CASA (ORIGEN)
-            Card(
-                modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(12.dp)),
-                colors = CardDefaults.cardColors(containerColor = SurfaceDark)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Home, contentDescription = null, tint = FlashGreen)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Punto de Salida Habitual (Casa / Origen)", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "La app siempre usa tu GPS en vivo al subir al coche. Si estás en un garaje o aún no hay satélites, usará este punto de partida exacto (nunca Madrid).",
-                        fontSize = 12.sp,
-                        color = TextSecondary,
-                        lineHeight = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedTextField(
-                        value = homeUrlInput,
-                        onValueChange = { homeUrlInput = it },
-                        label = { Text("Pegar enlace de Google Maps de Casa") },
-                        placeholder = { Text("https://maps.app.goo.gl/...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        trailingIcon = {
-                            IconButton(onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-                                if (clipText.isNotBlank()) {
-                                    homeUrlInput = clipText
-                                }
-                            }) {
-                                Icon(Icons.Default.ContentPaste, contentDescription = "Pegar", tint = FlashGreen)
-                            }
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FlashGreen,
-                            unfocusedBorderColor = CardBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                isParsingHome = true
-                                homeParseSuccess = null
-                                coroutineScope.launch {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-                                    val textToUse = if (clipText.isNotBlank()) clipText else homeUrlInput
-                                    homeUrlInput = textToUse
-                                    val parsed = LocationHelper.parseMapsInput(context, textToUse)
-                                    isParsingHome = false
-                                    if (parsed != null) {
-                                        homeLat = String.format(java.util.Locale.US, "%.6f", parsed.latitude)
-                                        homeLng = String.format(java.util.Locale.US, "%.6f", parsed.longitude)
-                                        homeAddress = parsed.addressName
-                                        homeParseSuccess = "✅ Salida fijada: ${parsed.addressName}"
-                                    } else {
-                                        homeParseSuccess = "Copia primero el enlace de Maps y pulsa aquí."
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = FlashGreen, contentColor = BgDark),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f).height(42.dp)
-                        ) {
-                            if (isParsingHome) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = BgDark, strokeWidth = 2.dp)
-                            } else {
-                                Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pegar y Extraer", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    val loc = locationProvider.getCurrentLocation()
-                                    if (loc != null) {
-                                        homeLat = String.format(java.util.Locale.US, "%.6f", loc.latitude)
-                                        homeLng = String.format(java.util.Locale.US, "%.6f", loc.longitude)
-                                        homeParseSuccess = "✅ Ubicación de Casa fijada con tu GPS actual."
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = FlashGreen),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f).height(42.dp)
-                        ) {
-                            Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Usar GPS Actual", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    if (homeParseSuccess != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = FlashGreen.copy(alpha = 0.15f),
-                            modifier = Modifier.fillMaxWidth().border(1.dp, FlashGreen, RoundedCornerShape(8.dp))
-                        ) {
-                            Text(
-                                text = homeParseSuccess!!,
-                                color = FlashGreen,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(10.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedTextField(
-                        value = homeAddress,
-                        onValueChange = { homeAddress = it },
-                        label = { Text("Nombre / Dirección de Salida") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FlashGreen,
-                            unfocusedBorderColor = CardBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = homeLat,
-                            onValueChange = { homeLat = it },
-                            label = { Text("Latitud Salida") },
-                            modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = FlashGreen,
-                                unfocusedBorderColor = CardBorder,
-                                focusedTextColor = TextPrimary,
-                                unfocusedTextColor = TextPrimary
-                            )
-                        )
-                        OutlinedTextField(
-                            value = homeLng,
-                            onValueChange = { homeLng = it },
-                            label = { Text("Longitud Salida") },
-                            modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = FlashGreen,
-                                unfocusedBorderColor = CardBorder,
-                                focusedTextColor = TextPrimary,
-                                unfocusedTextColor = TextPrimary
-                            )
-                        )
-                    }
-                }
-            }
-
-            // 3. DESTINO DE TRABAJO (CON GOOGLE MAPS DIRECTO)
+            // 2. DESTINO DE TRABAJO (CON GOOGLE MAPS DIRECTO)
             Card(
                 modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(12.dp)),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark)

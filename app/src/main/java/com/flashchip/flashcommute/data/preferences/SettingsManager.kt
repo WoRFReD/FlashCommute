@@ -1,4 +1,4 @@
-// Version 1.03 - FlashCommute
+// Version 1.04 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.data.preferences
 
@@ -23,9 +23,6 @@ class SettingsManager(context: Context) {
 
     fun updateSettings(newSettings: AppSettings) {
         prefs.edit().apply {
-            putString(KEY_HOME_ADDRESS, newSettings.homeAddress)
-            putFloat(KEY_HOME_LAT, newSettings.homeLatitude.toFloat())
-            putFloat(KEY_HOME_LNG, newSettings.homeLongitude.toFloat())
             putString(KEY_WORK_ADDRESS, newSettings.workAddress)
             putFloat(KEY_WORK_LAT, newSettings.workLatitude.toFloat())
             putFloat(KEY_WORK_LNG, newSettings.workLongitude.toFloat())
@@ -80,9 +77,6 @@ class SettingsManager(context: Context) {
         } else null
 
         return AppSettings(
-            homeAddress = prefs.getString(KEY_HOME_ADDRESS, "Casa / Punto de Salida") ?: "Casa / Punto de Salida",
-            homeLatitude = prefs.getFloat(KEY_HOME_LAT, 37.3898f).toDouble(),
-            homeLongitude = prefs.getFloat(KEY_HOME_LNG, -5.9850f).toDouble(),
             workAddress = prefs.getString(KEY_WORK_ADDRESS, "Toscano") ?: "Toscano",
             workLatitude = prefs.getFloat(KEY_WORK_LAT, 37.277612f).toDouble(),
             workLongitude = prefs.getFloat(KEY_WORK_LNG, -5.995569f).toDouble(),
@@ -105,9 +99,6 @@ class SettingsManager(context: Context) {
 
     companion object {
         private const val PREFS_NAME = "flashcommute_preferences"
-        private const val KEY_HOME_ADDRESS = "home_address"
-        private const val KEY_HOME_LAT = "home_lat"
-        private const val KEY_HOME_LNG = "home_lng"
         private const val KEY_WORK_ADDRESS = "work_address"
         private const val KEY_WORK_LAT = "work_lat"
         private const val KEY_WORK_LNG = "work_lng"

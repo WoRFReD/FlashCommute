@@ -1,4 +1,4 @@
-// Version 1.03 - FlashCommute
+// Version 1.04 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.service
 
@@ -8,6 +8,8 @@ import android.content.Intent
 import android.os.IBinder
 import com.flashchip.flashcommute.data.api.TrafficRepository
 import com.flashchip.flashcommute.data.location.LocationProvider
+import com.flashchip.flashcommute.data.model.TrafficReport
+import com.flashchip.flashcommute.data.model.TrafficStatus
 import com.flashchip.flashcommute.data.preferences.SettingsManager
 import com.flashchip.flashcommute.notification.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
@@ -51,17 +53,28 @@ class TrafficCheckService : Service() {
                     return@launch
                 }
 
-                // 1. Obtener ubicación GPS actual (con multilocalizador red/satélite)
+                // 1. Obtener SIEMPRE la ubicación actual en vivo donde se encuentre el usuario
                 val location = locationProvider.getCurrentLocation()
 
-                val (originLat, originLng, originDesc) = if (location != null) {
-                    Triple(location.latitude, location.longitude, "GPS en vivo")
-                } else {
-                    // Fallback a la ubicación de Casa configurada por el usuario (NUNCA Madrid)
-                    Triple(settings.homeLatitude, settings.homeLongitude, "Ubicación de Salida / Casa")
+                if (location == null) {
+                    val noGpsReport = TrafficReport(
+                        status = TrafficStatus.MODERATE,
+                        summary = "No se pudo obtener tu ubicación actual. Asegúrate de tener activada la Ubicación/GPS.",
+                        providerUsed = "GPS no disponible",
+                        originDescription = "Sin señal GPS actual"
+                    )
+                    settingsManager.saveLastReport(noGpsReport)
+                    NotificationHelper.showTrafficAlert(this@TrafficCheckService, noGpsReport)
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                    return@launch
                 }
 
-                // 2. Consultar reporte de tráfico
+                val originLat = location.latitude
+                val originLng = location.longitude
+                val originDesc = "GPS en vivo"
+
+                // 2. Consultar reporte de tráfico desde la ubicación exacta actual hacia el trabajo
                 val rawReport = trafficRepository.fetchTraffic(settings, originLat, originLng)
                 val report = rawReport.copy(originDescription = originDesc)
 
