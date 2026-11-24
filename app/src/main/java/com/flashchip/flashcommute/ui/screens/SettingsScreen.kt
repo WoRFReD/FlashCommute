@@ -1,4 +1,4 @@
-// Version 1.01 - FlashCommute
+// Version 1.02 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.ui.screens
 
@@ -57,6 +57,7 @@ fun SettingsScreen(
     var workAddress by remember { mutableStateOf(currentSettings.workAddress) }
     var workLat by remember { mutableStateOf(currentSettings.workLatitude.toString()) }
     var workLng by remember { mutableStateOf(currentSettings.workLongitude.toString()) }
+    var mapsUrlInput by remember { mutableStateOf("") }
     var mapsParseSuccess by remember { mutableStateOf<String?>(null) }
     var isParsingMaps by remember { mutableStateOf(false) }
 
@@ -219,31 +220,61 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Botones de Google Maps
+                    Button(
+                        onClick = {
+                            val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=")).apply {
+                                setPackage("com.google.android.apps.maps")
+                            }
+                            try {
+                                context.startActivity(mapIntent)
+                            } catch (e: Exception) {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://maps.google.com")))
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = FlashAmber),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(42.dp)
+                    ) {
+                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("1. Abrir Google Maps para Buscar tu Trabajo", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Campo visible para pegar o escribir el enlace
+                    OutlinedTextField(
+                        value = mapsUrlInput,
+                        onValueChange = { mapsUrlInput = it },
+                        label = { Text("Enlace o dirección de Google Maps") },
+                        placeholder = { Text("Pega aquí: https://maps.app.goo.gl/...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                                if (clipText.isNotBlank()) {
+                                    mapsUrlInput = clipText
+                                }
+                            }) {
+                                Icon(Icons.Default.ContentPaste, contentDescription = "Pegar", tint = FlashAmber)
+                            }
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = FlashAmber,
+                            unfocusedBorderColor = CardBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Botones de procesamiento del enlace
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=")).apply {
-                                    setPackage("com.google.android.apps.maps")
-                                }
-                                try {
-                                    context.startActivity(mapIntent)
-                                } catch (e: Exception) {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://maps.google.com")))
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = FlashAmber),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Abrir Google Maps", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-
                         Button(
                             onClick = {
                                 isParsingMaps = true
@@ -251,40 +282,74 @@ fun SettingsScreen(
                                 coroutineScope.launch {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-                                    val parsed = LocationHelper.parseMapsInput(context, clipText)
+                                    val textToUse = if (clipText.isNotBlank()) clipText else mapsUrlInput
+                                    mapsUrlInput = textToUse
+                                    val parsed = LocationHelper.parseMapsInput(context, textToUse)
                                     isParsingMaps = false
                                     if (parsed != null) {
                                         workLat = String.format(java.util.Locale.US, "%.6f", parsed.latitude)
                                         workLng = String.format(java.util.Locale.US, "%.6f", parsed.longitude)
                                         workAddress = parsed.addressName
-                                        mapsParseSuccess = "Ubicación fijada: ${parsed.addressName}"
+                                        mapsParseSuccess = "✅ Ubicación fijada: ${parsed.addressName}"
                                     } else {
-                                        mapsParseSuccess = "Copia primero el enlace o dirección en Google Maps y vuelve a pulsar aquí."
+                                        mapsParseSuccess = "No se pudieron extraer coordenadas del enlace. Intenta pulsar 'Abrir Google Maps', copiar de nuevo o escribir la dirección."
                                     }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = FlashAmber, contentColor = BgDark),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).height(44.dp)
                         ) {
                             if (isParsingMaps) {
-                                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = BgDark, strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = BgDark, strokeWidth = 2.dp)
                             } else {
                                 Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pegar Enlace Maps", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Pegar y Extraer", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
+                        }
+
+                        Button(
+                            onClick = {
+                                isParsingMaps = true
+                                mapsParseSuccess = null
+                                coroutineScope.launch {
+                                    val parsed = LocationHelper.parseMapsInput(context, mapsUrlInput)
+                                    isParsingMaps = false
+                                    if (parsed != null) {
+                                        workLat = String.format(java.util.Locale.US, "%.6f", parsed.latitude)
+                                        workLng = String.format(java.util.Locale.US, "%.6f", parsed.longitude)
+                                        workAddress = parsed.addressName
+                                        mapsParseSuccess = "✅ Ubicación fijada: ${parsed.addressName}"
+                                    } else {
+                                        mapsParseSuccess = "No se pudo extraer la ubicación del texto introducido."
+                                    }
+                                }
+                            },
+                            enabled = mapsUrlInput.trim().isNotBlank() && !isParsingMaps,
+                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = FlashCyan),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f).height(44.dp)
+                        ) {
+                            Text("Aplicar Enlace", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
                     if (mapsParseSuccess != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = mapsParseSuccess!!,
-                            color = if (mapsParseSuccess!!.startsWith("Ubicación")) FlashGreen else FlashAmber,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (mapsParseSuccess!!.startsWith("✅")) FlashGreen.copy(alpha = 0.15f) else FlashAmber.copy(alpha = 0.15f),
+                            modifier = Modifier.fillMaxWidth().border(1.dp, if (mapsParseSuccess!!.startsWith("✅")) FlashGreen else FlashAmber, RoundedCornerShape(8.dp))
+                        ) {
+                            Text(
+                                text = mapsParseSuccess!!,
+                                color = if (mapsParseSuccess!!.startsWith("✅")) FlashGreen else FlashAmber,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))

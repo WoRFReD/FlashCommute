@@ -5,6 +5,20 @@
 
 ---
 
+## [1.02] - Corrección Extracción Enlaces Google Maps y Caja de Pegado Directo
+- **Fecha:** 24/11/2026
+- **VersionCode:** `102`
+- **VersionName:** `1.02`
+- **Estado:** 🟢 Estable / Producción
+
+### 🔴 [CORRECCION]
+- **Soporte Completo de Enlaces Google Maps (Rutas y Destinos):** Corrección para enlaces cortos (`maps.app.goo.gl`) con formato de ruta (`/dir/.../data=!3d...!4d...`), extrayendo las coordenadas exactas de destino y el nombre del lugar automáticamente.
+
+### 🟡 [INTERFAZ]
+- **Caja de Texto para Pegar o Ver Enlace:** Campo visual integrado en Ajustes para pegar o escribir el enlace directamente con botón "Aplicar Enlace", permitiendo ver la URL y evitando problemas con el portapapeles.
+
+---
+
 ## [1.01] - Mejoras de UX, Google Maps y Botones de API
 - **Fecha:** 24/11/2026
 - **VersionCode:** `101`

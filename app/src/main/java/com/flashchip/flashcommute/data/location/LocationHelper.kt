@@ -1,14 +1,14 @@
-// Version 1.01 - FlashCommute
+// Version 1.02 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.data.location
 
 import android.content.Context
 import android.location.Geocoder
-import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLDecoder
 import java.util.Locale
 import java.util.regex.Pattern
 
@@ -26,86 +26,128 @@ object LocationHelper {
 
         var targetText = input
 
-        // 1. Si es un enlace corto de Google Maps (maps.app.goo.gl), seguir la redirección
+        // 1. Si es un enlace corto de Google Maps (maps.app.goo.gl o goo.gl), resolver redirecciones
         if (input.contains("maps.app.goo.gl") || input.contains("goo.gl/maps")) {
             try {
-                val url = URL(input)
-                val conn = (url.openConnection() as HttpURLConnection).apply {
-                    instanceFollowRedirects = false
-                    connectTimeout = 6000
-                    readTimeout = 6000
-                    setRequestProperty("User-Agent", "Mozilla/5.0")
+                var currentUrl = input
+                var redirects = 0
+                while (redirects < 5) {
+                    val url = URL(currentUrl)
+                    val conn = (url.openConnection() as HttpURLConnection).apply {
+                        instanceFollowRedirects = false
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    }
+                    val code = conn.responseCode
+                    if (code in 300..399) {
+                        val redirect = conn.getHeaderField("Location")
+                        conn.disconnect()
+                        if (!redirect.isNullOrBlank()) {
+                            currentUrl = redirect
+                            redirects++
+                        } else {
+                            break
+                        }
+                    } else {
+                        conn.disconnect()
+                        break
+                    }
                 }
-                val redirect = conn.getHeaderField("Location")
-                conn.disconnect()
-                if (!redirect.isNullOrBlank()) {
-                    targetText = redirect
-                }
+                targetText = currentUrl
             } catch (e: Exception) {
-                // Si falla la red, continuamos con el texto original
+                // Continuar con el texto recibido
             }
         }
 
-        // 2. Extraer coordenadas con expresiones regulares
-        // Patrón 1: @40.416775,-3.703790
+        var placeNameFromUrl: String? = null
+
+        // Extraer nombre de destino si viene en formato /dir/.../NombreDestino/...
+        val dirNamePattern = Pattern.compile("/maps/dir/[^/]+/([^/?#]+)")
+        val dirNameMatcher = dirNamePattern.matcher(targetText)
+        if (dirNameMatcher.find()) {
+            val rawName = dirNameMatcher.group(1)
+            if (!rawName.isNullOrBlank() && !rawName.matches(Regex("^-?\\d+\\.\\d+,-?\\d+\\.\\d+$"))) {
+                try {
+                    placeNameFromUrl = URLDecoder.decode(rawName, "UTF-8").replace("+", " ")
+                } catch (e: Exception) {
+                    placeNameFromUrl = rawName
+                }
+            }
+        }
+
+        // Patrón A: Coordenadas protobuf de Google Maps !3d37.2776119!4d-5.9955691 (Rutas y Sitios)
+        val protoPattern = Pattern.compile("!3d(-?\\d+\\.\\d+)!4d(-?\\d+\\.\\d+)")
+        val protoMatcher = protoPattern.matcher(targetText)
+        if (protoMatcher.find()) {
+            val lat = protoMatcher.group(1)?.toDoubleOrNull()
+            val lng = protoMatcher.group(2)?.toDoubleOrNull()
+            if (lat != null && lng != null) {
+                val name = placeNameFromUrl ?: reverseGeocode(context, lat, lng) ?: "Destino fijado desde Google Maps"
+                return@withContext ParsedLocation(lat, lng, name)
+            }
+        }
+
+        // Patrón B: Coordenadas directas de destino en ruta /dir/origen/lat,lng
+        val dirCoordPattern = Pattern.compile("/maps/dir/[^/]+/(-?\\d+\\.\\d+),(-?\\d+\\.\\d+)")
+        val dirCoordMatcher = dirCoordPattern.matcher(targetText)
+        if (dirCoordMatcher.find()) {
+            val lat = dirCoordMatcher.group(1)?.toDoubleOrNull()
+            val lng = dirCoordMatcher.group(2)?.toDoubleOrNull()
+            if (lat != null && lng != null) {
+                val name = placeNameFromUrl ?: reverseGeocode(context, lat, lng) ?: "Destino fijado desde Google Maps"
+                return@withContext ParsedLocation(lat, lng, name)
+            }
+        }
+
+        // Patrón C: Coordenadas con @ (@40.416775,-3.703790)
         val atPattern = Pattern.compile("@(-?\\d+\\.\\d+),(-?\\d+\\.\\d+)")
         val atMatcher = atPattern.matcher(targetText)
         if (atMatcher.find()) {
             val lat = atMatcher.group(1)?.toDoubleOrNull()
             val lng = atMatcher.group(2)?.toDoubleOrNull()
             if (lat != null && lng != null) {
-                val name = reverseGeocode(context, lat, lng) ?: "Ubicación seleccionada en Google Maps"
+                val name = placeNameFromUrl ?: reverseGeocode(context, lat, lng) ?: "Ubicación en Google Maps"
                 return@withContext ParsedLocation(lat, lng, name)
             }
         }
 
-        // Patrón 2: ?q=40.416775,-3.703790 o ll=40.416775,-3.703790 o destination=40.416775,-3.703790
+        // Patrón D: Parámetro q=lat,lng o destination=lat,lng o ll=lat,lng
         val qPattern = Pattern.compile("[?&](?:q|ll|destination)=(-?\\d+\\.\\d+),(-?\\d+\\.\\d+)")
         val qMatcher = qPattern.matcher(targetText)
         if (qMatcher.find()) {
             val lat = qMatcher.group(1)?.toDoubleOrNull()
             val lng = qMatcher.group(2)?.toDoubleOrNull()
             if (lat != null && lng != null) {
-                val name = reverseGeocode(context, lat, lng) ?: "Ubicación seleccionada en Google Maps"
+                val name = placeNameFromUrl ?: reverseGeocode(context, lat, lng) ?: "Ubicación en Google Maps"
                 return@withContext ParsedLocation(lat, lng, name)
             }
         }
 
-        // Patrón 3: Coordenadas directas "40.416775, -3.703790"
+        // Patrón E: Coordenadas directas escritas "37.2776, -5.9955"
         val coordPattern = Pattern.compile("^(-?\\d+\\.\\d+)\\s*,\\s*(-?\\d+\\.\\d+)$")
         val coordMatcher = coordPattern.matcher(targetText)
         if (coordMatcher.find()) {
             val lat = coordMatcher.group(1)?.toDoubleOrNull()
             val lng = coordMatcher.group(2)?.toDoubleOrNull()
             if (lat != null && lng != null) {
-                val name = reverseGeocode(context, lat, lng) ?: "Ubicación fija"
+                val name = reverseGeocode(context, lat, lng) ?: "Coordenadas fijadas"
                 return@withContext ParsedLocation(lat, lng, name)
             }
         }
 
-        // 3. Si no son coordenadas, intentar resolverlo como dirección con Geocoder nativo
+        // 3. Fallback a Geocoder nativo si es una dirección o texto
         try {
             val geocoder = Geocoder(context, Locale.getDefault())
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Geocoder sincrónico para la corrutina IO
-                @Suppress("DEPRECATION")
-                val results = geocoder.getFromLocationName(input, 1)
-                if (!results.isNullOrEmpty()) {
-                    val addr = results[0]
-                    val readable = addr.getAddressLine(0) ?: input
-                    return@withContext ParsedLocation(addr.latitude, addr.longitude, readable)
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                val results = geocoder.getFromLocationName(input, 1)
-                if (!results.isNullOrEmpty()) {
-                    val addr = results[0]
-                    val readable = addr.getAddressLine(0) ?: input
-                    return@withContext ParsedLocation(addr.latitude, addr.longitude, readable)
-                }
+            @Suppress("DEPRECATION")
+            val results = geocoder.getFromLocationName(input, 1)
+            if (!results.isNullOrEmpty()) {
+                val addr = results[0]
+                val readable = addr.getAddressLine(0) ?: input
+                return@withContext ParsedLocation(addr.latitude, addr.longitude, readable)
             }
         } catch (e: Exception) {
-            // Geocoder no disponible
+            // Geocoder fallo silencioso
         }
 
         null
