@@ -5,6 +5,17 @@
 
 ---
 
+## [1.05] - Gestión del Botón Atrás Nativo (BackHandler)
+- **Fecha:** 24/11/2026
+- **VersionCode:** `105`
+- **VersionName:** `1.05`
+- **Estado:** 🟢 Estable / Producción
+
+### 🟢 [NUEVA_FUNCION]
+- **Navegación Fluida con Botón Físico / Gesto Atrás:** Implementado `BackHandler` nativo de Jetpack Compose en `MainActivity`. Al estar en Ajustes o en la Guía de APIs, pulsar el botón Atrás del móvil regresa suavemente a la pantalla principal sin cerrar la aplicación.
+
+---
+
 ## [1.04] - Origen 100% Dinámico en Tiempo Real (Sin punto fijo)
 - **Fecha:** 24/11/2026
 - **VersionCode:** `104`

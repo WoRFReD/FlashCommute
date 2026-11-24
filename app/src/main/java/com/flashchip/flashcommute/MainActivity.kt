@@ -1,9 +1,10 @@
-// Version 1.04 - FlashCommute
+// Version 1.05 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,11 @@ class MainActivity : ComponentActivity() {
                     var currentScreen by remember { mutableStateOf(Screen.HOME) }
                     var showAboutDialog by remember { mutableStateOf(false) }
 
+                    // Gestión del botón físico / gesto nativo "Atrás" de Android
+                    BackHandler(enabled = currentScreen != Screen.HOME) {
+                        currentScreen = Screen.HOME
+                    }
+
                     Column(modifier = Modifier.fillMaxSize().background(BgDark)) {
                         PermissionsBanner()
 
@@ -72,7 +78,7 @@ class MainActivity : ComponentActivity() {
 
                     if (showAboutDialog) {
                         AboutOtaDialog(
-                            currentVersion = "1.04",
+                            currentVersion = "1.05",
                             onDismiss = { showAboutDialog = false }
                         )
                     }
