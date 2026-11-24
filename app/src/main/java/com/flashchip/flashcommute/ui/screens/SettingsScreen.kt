@@ -1,10 +1,13 @@
-// Version 1.00 - FlashCommute
+// Version 1.01 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.ui.screens
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.BluetoothSearching
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,8 +32,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flashchip.flashcommute.data.api.TrafficRepository
+import com.flashchip.flashcommute.data.location.LocationHelper
 import com.flashchip.flashcommute.data.location.LocationProvider
-import com.flashchip.flashcommute.data.model.AppSettings
 import com.flashchip.flashcommute.data.preferences.SettingsManager
 import com.flashchip.flashcommute.ui.theme.*
 import kotlinx.coroutines.launch
@@ -52,6 +57,8 @@ fun SettingsScreen(
     var workAddress by remember { mutableStateOf(currentSettings.workAddress) }
     var workLat by remember { mutableStateOf(currentSettings.workLatitude.toString()) }
     var workLng by remember { mutableStateOf(currentSettings.workLongitude.toString()) }
+    var mapsParseSuccess by remember { mutableStateOf<String?>(null) }
+    var isParsingMaps by remember { mutableStateOf(false) }
 
     var btAddress by remember { mutableStateOf(currentSettings.bluetoothDeviceAddress) }
     var btName by remember { mutableStateOf(currentSettings.bluetoothDeviceName) }
@@ -110,7 +117,7 @@ fun SettingsScreen(
                 title = { Text("Ajustes de FlashCommute", fontWeight = FontWeight.Bold, color = TextPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = FlashCyan)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = FlashCyan)
                     }
                 },
                 actions = {
@@ -173,7 +180,7 @@ fun SettingsScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = FlashCyan),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Icon(Icons.Default.BluetoothSearching, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.AutoMirrored.Filled.BluetoothSearching, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Elegir Dispositivo Emparejado", fontSize = 12.sp)
                         }
@@ -192,7 +199,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 2. DESTINO DE TRABAJO
+            // 2. DESTINO DE TRABAJO (CON GOOGLE MAPS DIRECTO)
             Card(
                 modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(12.dp)),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark)
@@ -203,7 +210,84 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Destino de Trabajo", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "Puedes abrir Google Maps, copiar el enlace de tu trabajo y pegarlo aquí con un toque:",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Botones de Google Maps
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=")).apply {
+                                    setPackage("com.google.android.apps.maps")
+                                }
+                                try {
+                                    context.startActivity(mapIntent)
+                                } catch (e: Exception) {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://maps.google.com")))
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = FlashAmber),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Abrir Google Maps", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                isParsingMaps = true
+                                mapsParseSuccess = null
+                                coroutineScope.launch {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                                    val parsed = LocationHelper.parseMapsInput(context, clipText)
+                                    isParsingMaps = false
+                                    if (parsed != null) {
+                                        workLat = String.format(java.util.Locale.US, "%.6f", parsed.latitude)
+                                        workLng = String.format(java.util.Locale.US, "%.6f", parsed.longitude)
+                                        workAddress = parsed.addressName
+                                        mapsParseSuccess = "Ubicación fijada: ${parsed.addressName}"
+                                    } else {
+                                        mapsParseSuccess = "Copia primero el enlace o dirección en Google Maps y vuelve a pulsar aquí."
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = FlashAmber, contentColor = BgDark),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (isParsingMaps) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = BgDark, strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Pegar Enlace Maps", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    if (mapsParseSuccess != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = mapsParseSuccess!!,
+                            color = if (mapsParseSuccess!!.startsWith("Ubicación")) FlashGreen else FlashAmber,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     OutlinedTextField(
                         value = workAddress,
@@ -256,15 +340,16 @@ fun SettingsScreen(
                                 if (loc != null) {
                                     workLat = String.format(java.util.Locale.US, "%.6f", loc.latitude)
                                     workLng = String.format(java.util.Locale.US, "%.6f", loc.longitude)
+                                    mapsParseSuccess = "Coordenadas fijadas con tu GPS actual."
                                 }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = FlashAmber),
+                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = TextPrimary),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp), tint = FlashAmber)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Usar mi ubicación actual como Destino", fontSize = 12.sp)
+                        Text("Usar mi ubicación GPS actual", fontSize = 12.sp)
                     }
                 }
             }
@@ -298,9 +383,7 @@ fun SettingsScreen(
                             label = { Text("Hora Inicio") },
                             modifier = Modifier.weight(1f),
                             trailingIcon = {
-                                IconButton(onClick = {
-                                    startHour = (startHour + 1) % 24
-                                }) {
+                                IconButton(onClick = { startHour = (startHour + 1) % 24 }) {
                                     Icon(Icons.Default.KeyboardArrowUp, contentDescription = "+1h", tint = FlashCyan)
                                 }
                             },
@@ -319,9 +402,7 @@ fun SettingsScreen(
                             label = { Text("Hora Fin") },
                             modifier = Modifier.weight(1f),
                             trailingIcon = {
-                                IconButton(onClick = {
-                                    endHour = (endHour + 1) % 24
-                                }) {
+                                IconButton(onClick = { endHour = (endHour + 1) % 24 }) {
                                     Icon(Icons.Default.KeyboardArrowUp, contentDescription = "+1h", tint = FlashCyan)
                                 }
                             },
@@ -377,7 +458,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 4. UMBRAL DE ALERTA CRÍTICA (DEFAULT 7 MINUTOS)
+            // 4. UMBRAL DE ALERTA CRÍTICA
             Card(
                 modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(12.dp)),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark)
@@ -402,7 +483,7 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Si el tráfico provoca un retraso igual o mayor a ${criticalDelay.toInt()} minutos, la app disparará una alerta prioritaria en tu teléfono.",
+                        text = "Si el tráfico provoca un retraso de ${criticalDelay.toInt()} min o más, la app disparará una alerta prioritaria en tu móvil.",
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
@@ -420,7 +501,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 5. MOTOR DE TRÁFICO Y CLAVES API
+            // 5. MOTOR DE TRÁFICO Y CLAVES API (BOTONES GRANDES Y MISMO COLOR)
             Card(
                 modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(12.dp)),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark)
@@ -443,7 +524,7 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Selector de Modo (Híbrido, TomTom, Google)
+                    // Selector de Modo
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -476,16 +557,18 @@ fun SettingsScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    // Clave TomTom
+                    // ---------------- CLAVE TOMTOM ----------------
+                    Text("1. API TOMTOM (2.500/DÍA GRATIS)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = FlashCyan, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = tomtomKey,
                         onValueChange = {
                             tomtomKey = it
                             tomtomTestStatus = null
                         },
-                        label = { Text("Clave API TomTom (2.500/día gratis)") },
+                        label = { Text("Pega aquí tu clave API de TomTom") },
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = if (showTomtomKey) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
@@ -498,51 +581,87 @@ fun SettingsScreen(
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FlashGreen,
+                            focusedBorderColor = FlashCyan,
                             unfocusedBorderColor = CardBorder,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        TextButton(
-                            onClick = {
-                                isTestingTomtom = true
-                                coroutineScope.launch {
-                                    tomtomTestStatus = trafficRepository.testTomTomKey(tomtomKey.trim())
-                                    isTestingTomtom = false
-                                }
-                            },
-                            enabled = tomtomKey.isNotBlank() && !isTestingTomtom
-                        ) {
-                            Text("Probar conexión TomTom", fontSize = 12.sp, color = FlashGreen)
-                        }
+                    Spacer(modifier = Modifier.height(8.dp))
 
+                    // Botón Grande Probar TomTom
+                    val isTomtomKeyFilled = tomtomKey.trim().isNotBlank()
+                    Button(
+                        onClick = {
+                            isTestingTomtom = true
+                            tomtomTestStatus = null
+                            coroutineScope.launch {
+                                tomtomTestStatus = trafficRepository.testTomTomKey(tomtomKey.trim())
+                                isTestingTomtom = false
+                            }
+                        },
+                        enabled = isTomtomKeyFilled && !isTestingTomtom,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FlashCyan,
+                            contentColor = BgDark,
+                            disabledContainerColor = SurfaceCard,
+                            disabledContentColor = TextMuted
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().height(46.dp)
+                    ) {
                         if (isTestingTomtom) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = FlashGreen, strokeWidth = 2.dp)
-                        } else if (tomtomTestStatus == true) {
-                            Text("✅ Clave válida", color = FlashGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        } else if (tomtomTestStatus == false) {
-                            Text("❌ Clave no válida", color = FlashRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = BgDark, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Probando conexión con TomTom...", fontWeight = FontWeight.Bold)
+                        } else {
+                            Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("PROBAR CONEXIÓN TOMTOM", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    if (tomtomTestStatus == true) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = FlashGreen.copy(alpha = 0.15f),
+                            modifier = Modifier.fillMaxWidth().border(1.dp, FlashGreen, RoundedCornerShape(8.dp))
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = FlashGreen, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("✅ ¡Conexión con TomTom exitosa! Clave válida.", color = FlashGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    } else if (tomtomTestStatus == false) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = FlashRed.copy(alpha = 0.15f),
+                            modifier = Modifier.fillMaxWidth().border(1.dp, FlashRed, RoundedCornerShape(8.dp))
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Error, contentDescription = null, tint = FlashRed, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("❌ La clave de TomTom no es válida o está incompleta.", color = FlashRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    }
 
-                    // Clave Google Routes
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // ---------------- CLAVE GOOGLE ROUTES ----------------
+                    Text("2. API GOOGLE ROUTES (200$/MES GRATIS)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = FlashCyan, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = googleKey,
                         onValueChange = {
                             googleKey = it
                             googleTestStatus = null
                         },
-                        label = { Text("Clave API Google Routes (200$/mes gratis)") },
+                        label = { Text("Pega aquí tu clave API de Google Routes") },
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = if (showGoogleKey) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
@@ -562,31 +681,65 @@ fun SettingsScreen(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        TextButton(
-                            onClick = {
-                                isTestingGoogle = true
-                                coroutineScope.launch {
-                                    googleTestStatus = trafficRepository.testGoogleKey(googleKey.trim())
-                                    isTestingGoogle = false
-                                }
-                            },
-                            enabled = googleKey.isNotBlank() && !isTestingGoogle
-                        ) {
-                            Text("Probar conexión Google", fontSize = 12.sp, color = FlashCyan)
-                        }
+                    Spacer(modifier = Modifier.height(8.dp))
 
+                    // Botón Grande Probar Google (Mismo color FlashCyan)
+                    val isGoogleKeyFilled = googleKey.trim().isNotBlank()
+                    Button(
+                        onClick = {
+                            isTestingGoogle = true
+                            googleTestStatus = null
+                            coroutineScope.launch {
+                                googleTestStatus = trafficRepository.testGoogleKey(googleKey.trim())
+                                isTestingGoogle = false
+                            }
+                        },
+                        enabled = isGoogleKeyFilled && !isTestingGoogle,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FlashCyan,
+                            contentColor = BgDark,
+                            disabledContainerColor = SurfaceCard,
+                            disabledContentColor = TextMuted
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().height(46.dp)
+                    ) {
                         if (isTestingGoogle) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = FlashCyan, strokeWidth = 2.dp)
-                        } else if (googleTestStatus == true) {
-                            Text("✅ Clave válida", color = FlashCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        } else if (googleTestStatus == false) {
-                            Text("❌ Clave no válida", color = FlashRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = BgDark, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Probando conexión con Google...", fontWeight = FontWeight.Bold)
+                        } else {
+                            Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("PROBAR CONEXIÓN GOOGLE", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+
+                    if (googleTestStatus == true) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = FlashGreen.copy(alpha = 0.15f),
+                            modifier = Modifier.fillMaxWidth().border(1.dp, FlashGreen, RoundedCornerShape(8.dp))
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = FlashGreen, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("✅ ¡Conexión con Google Routes exitosa!", color = FlashGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    } else if (googleTestStatus == false) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = FlashRed.copy(alpha = 0.15f),
+                            modifier = Modifier.fillMaxWidth().border(1.dp, FlashRed, RoundedCornerShape(8.dp))
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Error, contentDescription = null, tint = FlashRed, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("❌ La clave de Google Routes no es válida.", color = FlashRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
                         }
                     }
                 }
@@ -596,8 +749,8 @@ fun SettingsScreen(
             Button(
                 onClick = { saveAll() },
                 colors = ButtonDefaults.buttonColors(containerColor = FlashGreen, contentColor = BgDark),
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(10.dp)
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(Icons.Default.Save, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))

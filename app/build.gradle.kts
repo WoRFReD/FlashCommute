@@ -1,4 +1,4 @@
-// Version 1.00 - FlashCommute
+// Version 1.01 - FlashCommute
 // Developed for FlashChip by WoRFReD
 
 plugins {
@@ -14,8 +14,8 @@ android {
         applicationId = "com.flashchip.flashcommute"
         minSdk = 26
         targetSdk = 34
-        versionCode = 100
-        versionName = "1.00"
+        versionCode = 101
+        versionName = "1.01"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -5,6 +5,23 @@
 
 ---
 
+## [1.01] - Mejoras de UX, Google Maps y Botones de API
+- **Fecha:** 24/11/2026
+- **VersionCode:** `101`
+- **VersionName:** `1.01`
+- **Estado:** 🟢 Estable / Producción
+
+### 🟢 [NUEVA_FUNCION]
+- **Asignación de Ubicación con Google Maps:** Botones integrados para abrir Google Maps y pegar el enlace o dirección copiado, extrayendo las coordenadas GPS exactas automáticamente.
+- **Aviso Interactivo Sin Claves API:** Diálogo explicativo al pulsar "Comprobar Ruta Ahora" si no hay clave configurada, con acceso directo a Ajustes.
+- **Feedback Dinámico por Color del Tiempo de Ruta:** Presentación clara del tiempo restante en verde (fluido), amarillo (moderado) o rojo (retraso crítico >= umbral).
+
+### 🟡 [INTERFAZ]
+- **Botones de Prueba de API Unificados:** Botones grandes y visibles en color Cian Neón uniforme, con estado inactivo en gris cuando el campo está vacío y activo al introducir la clave.
+- Mensajes visuales con tarjeta de confirmación del estado de conexión tras la prueba.
+
+---
+
 ## [1.00] - Versión Inicial Oficial (Release Inicial)
 - **Fecha:** 24/11/2026
 - **VersionCode:** `100`
