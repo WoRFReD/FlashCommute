@@ -5,6 +5,26 @@
 
 ---
 
+## [1.06] - Permiso en Segundo Plano, Despertar de Pantalla y Red de Garaje
+- **Fecha:** 25/11/2026
+- **VersionCode:** `106`
+- **VersionName:** `1.06`
+- **Estado:** 🟢 Estable / Producción
+
+### 🟢 [NUEVA_FUNCION]
+- **Gestión Avanzada de Permisos en Segundo Plano:** Nuevo flujo guiado de permisos para solicitar "Permitir todo el tiempo" (`ACCESS_BACKGROUND_LOCATION`) necesario en Android 10, 11, 12, 13 y 14 para detectar el coche con la pantalla bloqueada o en el bolsillo.
+- **Despertar Automático de Pantalla (WakeLock):** Al conectarse al Bluetooth del coche y completar el análisis de tráfico, la pantalla del móvil se enciende automáticamente durante 8 segundos. Permite ver la notificación de un vistazo en el soporte/trípode del coche sin tocar el móvil.
+- **Notificaciones Visibles por Código de Color:**
+  - 🟢 **Verde (Fluido):** Alerta en pantalla de bloqueo con duración, hora de llegada y tono suave.
+  - 🟡 **Amarillo (Moderado):** Alerta en pantalla de bloqueo con demora añadida y tono informativo.
+  - 🔴 **Rojo (Crítico / Alarma):** Prioridad máxima con sonido de alarma sonoro y vibración prolongada.
+
+### 🔴 [CORRECCION]
+- **Rescate de Cobertura en Garajes Subterráneos:** Eliminado el límite que descartaba ubicaciones antiguas. Implementada memoria persistente en `SettingsManager` que conserva la última posición válida registrada (por ejemplo, al caminar por la calle hacia el coche) para usarla de partida inmediata si los satélites no llegan bajo techo.
+- **Desbloqueo del Botón Manual:** Corregido el bloqueo en "Consultando Tráfico en Vivo..." de la pantalla principal con `LaunchedEffect` reactivo que se auto-desbloquea en cuanto llega el reporte o tras un tiempo prudencial.
+
+---
+
 ## [1.05] - Gestión del Botón Atrás Nativo (BackHandler)
 - **Fecha:** 24/11/2026
 - **VersionCode:** `105`

@@ -56,6 +56,22 @@ class SettingsManager(context: Context) {
         )
     }
 
+    fun saveLastKnownLocation(lat: Double, lng: Double) {
+        prefs.edit()
+            .putFloat(KEY_SAVED_LAT, lat.toFloat())
+            .putFloat(KEY_SAVED_LNG, lng.toFloat())
+            .putLong(KEY_SAVED_LOC_TIME, System.currentTimeMillis())
+            .apply()
+    }
+
+    fun getLastKnownLocation(): Pair<Double, Double>? {
+        if (!prefs.contains(KEY_SAVED_LAT) || !prefs.contains(KEY_SAVED_LNG)) return null
+        val lat = prefs.getFloat(KEY_SAVED_LAT, 0f).toDouble()
+        val lng = prefs.getFloat(KEY_SAVED_LNG, 0f).toDouble()
+        if (lat == 0.0 && lng == 0.0) return null
+        return Pair(lat, lng)
+    }
+
     private fun loadSettings(): AppSettings {
         val daysSet = prefs.getStringSet(KEY_ACTIVE_DAYS, null)?.mapNotNull {
             it.toIntOrNull()
@@ -116,5 +132,8 @@ class SettingsManager(context: Context) {
         private const val KEY_LAST_REPORT = "last_report"
         private const val KEY_LAST_TIME = "last_time"
         private const val KEY_AUTO_ENABLED = "auto_enabled"
+        private const val KEY_SAVED_LAT = "saved_last_lat"
+        private const val KEY_SAVED_LNG = "saved_last_lng"
+        private const val KEY_SAVED_LOC_TIME = "saved_last_loc_time"
     }
 }

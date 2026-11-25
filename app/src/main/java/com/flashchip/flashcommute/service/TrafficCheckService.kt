@@ -1,4 +1,4 @@
-// Version 1.04 - FlashCommute
+// Version 1.06 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.service
 
@@ -59,9 +59,9 @@ class TrafficCheckService : Service() {
                 if (location == null) {
                     val noGpsReport = TrafficReport(
                         status = TrafficStatus.MODERATE,
-                        summary = "No se pudo obtener tu ubicación actual. Asegúrate de tener activada la Ubicación/GPS.",
+                        summary = "No se pudo obtener tu ubicación actual. Comprueba la Ubicación y el permiso 'Permitir todo el tiempo'.",
                         providerUsed = "GPS no disponible",
-                        originDescription = "Sin señal GPS actual"
+                        originDescription = "Sin señal GPS"
                     )
                     settingsManager.saveLastReport(noGpsReport)
                     NotificationHelper.showTrafficAlert(this@TrafficCheckService, noGpsReport)
@@ -72,7 +72,7 @@ class TrafficCheckService : Service() {
 
                 val originLat = location.latitude
                 val originLng = location.longitude
-                val originDesc = "GPS en vivo"
+                val originDesc = if (location.provider == "garage_cache") "Ubicación reciente (Garaje)" else "GPS en vivo"
 
                 // 2. Consultar reporte de tráfico desde la ubicación exacta actual hacia el trabajo
                 val rawReport = trafficRepository.fetchTraffic(settings, originLat, originLng)

@@ -1,4 +1,4 @@
-// Version 1.04 - FlashCommute
+// Version 1.06 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.ui.screens
 
@@ -46,6 +46,17 @@ fun HomeScreen(
     val settings by settingsManager.settingsFlow.collectAsState()
     var isCheckingManual by remember { mutableStateOf(false) }
     var showNoApiDialog by remember { mutableStateOf(false) }
+
+    // Auto-desbloquear el botón si llega un reporte o tras un tiempo prudencial
+    LaunchedEffect(settings.lastCheckTime) {
+        isCheckingManual = false
+    }
+    LaunchedEffect(isCheckingManual) {
+        if (isCheckingManual) {
+            kotlinx.coroutines.delay(4000L)
+            isCheckingManual = false
+        }
+    }
 
     val report = settings.lastCheckReport
     val status = report?.status ?: TrafficStatus.FLUID
@@ -371,9 +382,6 @@ fun HomeScreen(
                     } else {
                         isCheckingManual = true
                         TrafficCheckService.startCheck(context, manual = true)
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                            isCheckingManual = false
-                        }, 2500)
                     }
                 },
                 enabled = !isCheckingManual,
