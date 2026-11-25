@@ -1,4 +1,4 @@
-// Version 1.06 - FlashCommute
+// Version 1.07 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.data.location
 
@@ -13,47 +13,63 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.abs
 
 class LocationProvider(private val context: Context) {
     private val fusedClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
     private val settingsManager = SettingsManager(context)
 
+    fun isLocationServiceEnabled(): Boolean {
+        val locManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return false
+        return locManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+               locManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
     @SuppressLint("MissingPermission")
     suspend fun getCurrentLocation(): Location? {
         var foundLocation: Location? = null
 
-        // 1. Comprobar la última ubicación de Google Play Services si es muy reciente (<= 10 min)
+        // 1. Guardar la última ubicación conocida del sistema como candidato rápido
+        var systemLastLocation: Location? = null
         try {
             val fusedLast = fusedClient.lastLocation.await()
-            if (fusedLast != null && isLocationRecent(fusedLast, 10 * 60 * 1000L)) {
-                foundLocation = fusedLast
+            if (fusedLast != null) {
+                systemLastLocation = fusedLast
+                // Si es reciente (menos de 5 min), usarla de inmediato para máxima rapidez
+                if (isLocationRecent(fusedLast, 5 * 60 * 1000L)) {
+                    foundLocation = fusedLast
+                }
             }
         } catch (e: Exception) {
             // Continuar
         }
 
-        // 2. Si no hay posición fresca, intentar solicitar posición rápida por Red/Wi-Fi/Torres (3.5 seg)
+        // 2. Si no hay posición reciente, pedir ubicación fresca balanceada (antenas/wifi/satélite) rápido (3s)
         if (foundLocation == null) {
+            val ctsBalanced = CancellationTokenSource()
             try {
-                val ctsBalanced = CancellationTokenSource()
-                foundLocation = withTimeoutOrNull(3500L) {
+                foundLocation = withTimeoutOrNull(3000L) {
                     fusedClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, ctsBalanced.token).await()
                 }
             } catch (e: Exception) {
                 // Continuar
+            } finally {
+                ctsBalanced.cancel()
             }
         }
 
-        // 3. Si sigue sin haber, solicitar posición por GPS satélite (4.5 seg)
+        // 3. Si sigue sin responder, intentar alta precisión (3s)
         if (foundLocation == null) {
+            val ctsGps = CancellationTokenSource()
             try {
-                val ctsGps = CancellationTokenSource()
-                foundLocation = withTimeoutOrNull(4500L) {
+                foundLocation = withTimeoutOrNull(3000L) {
                     fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, ctsGps.token).await()
                 }
             } catch (e: Exception) {
                 // Continuar
+            } finally {
+                ctsGps.cancel()
             }
         }
 
@@ -72,13 +88,9 @@ class LocationProvider(private val context: Context) {
             }
         }
 
-        // 5. Fallback a la última ubicación del sistema aunque sea más antigua (p. ej. al aparcar anoche o entrar al garaje)
-        if (foundLocation == null) {
-            try {
-                foundLocation = fusedClient.lastLocation.await()
-            } catch (e: Exception) {
-                // Continuar
-            }
+        // 5. Fallback a la última posición conocida del sistema aunque sea más antigua
+        if (foundLocation == null && systemLastLocation != null) {
+            foundLocation = systemLastLocation
         }
 
         // 6. Red de seguridad final para garajes subterráneos: memoria persistente de la app
@@ -93,8 +105,8 @@ class LocationProvider(private val context: Context) {
             }
         }
 
-        // Guardar siempre la posición obtenida para futuros rescates en zonas sin cobertura
-        if (foundLocation != null) {
+        // Guardar la posición obtenida para futuros rescates en zonas sin cobertura
+        if (foundLocation != null && foundLocation.provider != "garage_cache") {
             settingsManager.saveLastKnownLocation(foundLocation.latitude, foundLocation.longitude)
         }
 
@@ -102,7 +114,7 @@ class LocationProvider(private val context: Context) {
     }
 
     private fun isLocationRecent(location: Location, maxAgeMillis: Long): Boolean {
-        val age = System.currentTimeMillis() - location.time
-        return age in 0..maxAgeMillis
+        val age = abs(System.currentTimeMillis() - location.time)
+        return age <= maxAgeMillis
     }
 }

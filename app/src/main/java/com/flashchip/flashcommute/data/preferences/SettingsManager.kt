@@ -19,6 +19,14 @@ class SettingsManager(context: Context) {
     private val _settingsFlow = MutableStateFlow(loadSettings())
     val settingsFlow: StateFlow<AppSettings> = _settingsFlow.asStateFlow()
 
+    private val prefChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        _settingsFlow.value = loadSettings()
+    }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(prefChangeListener)
+    }
+
     fun getSettings(): AppSettings = loadSettings()
 
     fun updateSettings(newSettings: AppSettings) {

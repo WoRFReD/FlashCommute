@@ -1,4 +1,4 @@
-// Version 1.06 - FlashCommute
+// Version 1.07 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.ui.screens
 
@@ -24,11 +24,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.flashchip.flashcommute.data.api.TrafficRepository
+import com.flashchip.flashcommute.data.location.LocationProvider
 import com.flashchip.flashcommute.data.model.TrafficReport
 import com.flashchip.flashcommute.data.model.TrafficStatus
 import com.flashchip.flashcommute.data.preferences.SettingsManager
+import com.flashchip.flashcommute.notification.NotificationHelper
 import com.flashchip.flashcommute.service.TrafficCheckService
 import com.flashchip.flashcommute.ui.theme.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -42,10 +46,13 @@ fun HomeScreen(
     onOpenAbout: () -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val settings by settingsManager.settingsFlow.collectAsState()
     var isCheckingManual by remember { mutableStateOf(false) }
+    var manualProgressText by remember { mutableStateOf<String?>(null) }
     var showNoApiDialog by remember { mutableStateOf(false) }
+    var locationErrorDialog by remember { mutableStateOf<String?>(null) }
 
     // Auto-desbloquear el botón si llega un reporte o tras un tiempo prudencial
     LaunchedEffect(settings.lastCheckTime) {
@@ -381,7 +388,37 @@ fun HomeScreen(
                         showNoApiDialog = true
                     } else {
                         isCheckingManual = true
-                        TrafficCheckService.startCheck(context, manual = true)
+                        coroutineScope.launch {
+                            try {
+                                manualProgressText = "Obteniendo ubicación GPS..."
+                                val provider = LocationProvider(context)
+
+                                if (!provider.isLocationServiceEnabled()) {
+                                    locationErrorDialog = "La Ubicación/GPS del teléfono está desactivada. Por favor, actívala en los ajustes de tu móvil para poder calcular la ruta."
+                                    return@launch
+                                }
+
+                                val location = provider.getCurrentLocation()
+                                if (location == null) {
+                                    locationErrorDialog = "No se pudo obtener señal GPS ni ubicación conocida. Asegúrate de tener buena cobertura o haber usado el GPS recientemente."
+                                    return@launch
+                                }
+
+                                manualProgressText = "Calculando ruta y tráfico en vivo..."
+                                val repo = TrafficRepository()
+                                val rawReport = repo.fetchTraffic(settings, location.latitude, location.longitude)
+                                val originDesc = if (location.provider == "garage_cache") "Ubicación reciente (Garaje)" else "GPS en vivo"
+                                val report = rawReport.copy(originDescription = originDesc)
+
+                                settingsManager.saveLastReport(report)
+                                NotificationHelper.showTrafficAlert(context, report)
+                            } catch (e: Exception) {
+                                locationErrorDialog = "Error al calcular ruta: ${e.localizedMessage ?: e.message}"
+                            } finally {
+                                isCheckingManual = false
+                                manualProgressText = null
+                            }
+                        }
                     }
                 },
                 enabled = !isCheckingManual,
@@ -392,7 +429,7 @@ fun HomeScreen(
                 if (isCheckingManual) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = BgDark, strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Consultando Tráfico en Vivo...", fontWeight = FontWeight.Bold)
+                    Text(manualProgressText ?: "Consultando Tráfico en Vivo...", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 } else {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -461,6 +498,37 @@ fun HomeScreen(
             dismissButton = {
                 TextButton(onClick = { showNoApiDialog = false }) {
                     Text("Entendido", color = TextSecondary)
+                }
+            }
+        )
+    }
+
+    // Diálogo de aviso de error de GPS o ruta
+    if (locationErrorDialog != null) {
+        AlertDialog(
+            onDismissRequest = { locationErrorDialog = null },
+            containerColor = SurfaceDark,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocationOff, contentDescription = null, tint = FlashAmber)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Aviso de Ubicación / Tráfico", color = FlashAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Text(
+                    text = locationErrorDialog ?: "",
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { locationErrorDialog = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = FlashCyan, contentColor = BgDark)
+                ) {
+                    Text("Entendido", fontWeight = FontWeight.Bold)
                 }
             }
         )

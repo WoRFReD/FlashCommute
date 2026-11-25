@@ -5,6 +5,20 @@
 
 ---
 
+## [1.07] - Ejecución Directa en UI, Sincronización StateFlow y Diagnóstico GPS
+- **Fecha:** 25/11/2026
+- **VersionCode:** `107`
+- **VersionName:** `1.07`
+- **Estado:** 🟢 Estable / Producción
+
+### 🔴 [CORRECCION CRITICA]
+- **Sincronización en Tiempo Real (`OnSharedPreferenceChangeListener`):** Solucionado el problema por el cual la pantalla principal no se enteraba cuando el servicio de tráfico guardaba un nuevo reporte. `SettingsManager` ahora escucha cambios de preferencias y actualiza el StateFlow en vivo para refrescar la interfaz de inmediato.
+- **Ejecución Directa en Pantalla Principal:** El botón "Comprobar Ruta Ahora" ejecuta la comprobación directamente desde una corrutina en primer plano con progreso en tiempo real ("Obteniendo ubicación GPS...", "Calculando ruta y tráfico..."), eliminando retrasos de servicios y bloqueos silenciosos.
+- **Detección de GPS Desactivado:** Si el usuario tiene la Ubicación/GPS apagada en los ajustes del teléfono, se muestra un diálogo explicativo claro en lugar de quedarse sin responder.
+- **Cancelación Segura de Tokens en `LocationProvider`:** Prevención de fugas y bloqueos de hilos al solicitar ubicación con `CancellationTokenSource`.
+
+---
+
 ## [1.06] - Permiso en Segundo Plano, Despertar de Pantalla y Red de Garaje
 - **Fecha:** 25/11/2026
 - **VersionCode:** `106`

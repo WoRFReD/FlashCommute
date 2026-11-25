@@ -1,4 +1,4 @@
-// Version 1.06 - FlashCommute
+// Version 1.07 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute
 
@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
 
                     if (showAboutDialog) {
                         AboutOtaDialog(
-                            currentVersion = "1.06",
+                            currentVersion = "1.07",
                             onDismiss = { showAboutDialog = false }
                         )
                     }

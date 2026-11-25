@@ -14,8 +14,8 @@ android {
         applicationId = "com.flashchip.flashcommute"
         minSdk = 26
         targetSdk = 34
-        versionCode = 106
-        versionName = "1.06"
+        versionCode = 107
+        versionName = "1.07"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

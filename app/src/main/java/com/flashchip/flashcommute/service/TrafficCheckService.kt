@@ -1,11 +1,14 @@
-// Version 1.06 - FlashCommute
+// Version 1.07 - FlashCommute
 // Developed for FlashChip by WoRFReD
 package com.flashchip.flashcommute.service
 
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.IBinder
+import androidx.core.app.ServiceCompat
 import com.flashchip.flashcommute.data.api.TrafficRepository
 import com.flashchip.flashcommute.data.location.LocationProvider
 import com.flashchip.flashcommute.data.model.TrafficReport
@@ -38,9 +41,18 @@ class TrafficCheckService : Service() {
             this, "Comprobando tráfico en tu ruta habitual..."
         )
         try {
-            startForeground(NotificationHelper.NOTIFICATION_ID_SERVICE, foregroundNotification)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(
+                    this,
+                    NotificationHelper.NOTIFICATION_ID_SERVICE,
+                    foregroundNotification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                )
+            } else {
+                startForeground(NotificationHelper.NOTIFICATION_ID_SERVICE, foregroundNotification)
+            }
         } catch (e: Exception) {
-            // Android 14 safe handling
+            // Safe fallback
         }
 
         serviceScope.launch {
